@@ -384,7 +384,7 @@ namespace ProblemReporter
                 _log.Info("{0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
             }
             Cfg.Reports.Add(r);
-            await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced; you'll get a Seerr notification when it's back.", ct).ConfigureAwait(false);
+            await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced automatically, usually within a few hours.", ct).ConfigureAwait(false);
         }
 
         private async Task ReportEpisode(User user, Episode ep, PluginConfiguration cfg, CancellationToken ct)
@@ -448,7 +448,7 @@ namespace ProblemReporter
                 _log.Info("{0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
             }
             Cfg.Reports.Add(r);
-            await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced; you'll get a Seerr notification when it's back.", ct).ConfigureAwait(false);
+            await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced automatically, usually within a few hours.", ct).ConfigureAwait(false);
         }
 
         private static string IssueText(User user, ProblemReport r, bool canBlocklist) =>
