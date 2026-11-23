@@ -7,6 +7,13 @@
             <h2>Recent reports</h2>
             <div id="reportList"></div>
 
+            <h2>Announcement</h2>
+            <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="chkAnnounce" /><span>Show each user a one-time message about Report a Problem</span></label></div>
+            <div class="fieldDescription">Shown the next time they open an Emby app that can display messages, when nothing is playing. Only while dry run is off. <span id="announcedCount"></span></div>
+            <div class="inputContainer"><input is="emby-input" type="text" id="txtAnnounceHeader" label="Title" /></div>
+            <div class="inputContainer"><textarea is="emby-textarea" id="txtAnnounceText" label="Message" rows="12" style="width:100%;"></textarea></div>
+            <div style="margin-bottom:2em;"><button is="emby-button" type="button" class="raised" id="btnAnnounceAgain"><span>Show it again to everyone</span></button></div>
+
             <h2>Playlist</h2>
             <div class="inputContainer"><input is="emby-input" type="text" id="txtPlaylistName" label="Playlist name" /><div class="fieldDescription">Changing this makes new playlists; delete the old ones by hand.</div></div>
             <div class="fieldDescription">Users who don't get a playlist:</div>

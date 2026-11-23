@@ -30,6 +30,24 @@ namespace ProblemReporter
         /// <summary>Stop waiting for a replacement after this many days; the Seerr issue stays open.</summary>
         public int GiveUpAfterDays { get; set; } = 14;
 
+        /// <summary>Show each user a one-time message about the playlist the next time they open an Emby app (only when dry run is off).</summary>
+        public bool AnnounceEnabled { get; set; } = true;
+        public string AnnouncementHeader { get; set; } = "New: Report a Problem";
+        public string AnnouncementText { get; set; } = DefaultAnnouncement;
+        /// <summary>Users who have already been shown the announcement.</summary>
+        public string[] AnnouncedUserIds { get; set; } = Array.Empty<string>();
+
+        public const string DefaultAnnouncement =
+            "If a movie or episode has a problem, you can now get it fixed yourself.\n\n" +
+            "Open it, then choose \u22EF (More) \u2192 Add to Playlist \u2192 Report a Problem.\n\n" +
+            "Use it when, for example:\n" +
+            "\u2022 The picture freezes, stutters, breaks up or looks low quality\n" +
+            "\u2022 The audio is out of sync, missing, crackly or in the wrong language\n" +
+            "\u2022 It's the wrong movie or episode, or it cuts off early\n" +
+            "\u2022 It won't play at all\n\n" +
+            "It leaves the playlist within a minute and a fresh copy downloads automatically, usually within a few hours. " +
+            "Please report single movies or episodes, not whole seasons.";
+
         public List<ProblemReport> Reports { get; set; } = new List<ProblemReport>();
     }
 

@@ -1,4 +1,4 @@
-define(['baseView', 'loading', 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller'], function (BaseView, loading) {
+define(['baseView', 'loading', 'emby-input', 'emby-textarea', 'emby-button', 'emby-checkbox', 'emby-scroller'], function (BaseView, loading) {
     'use strict';
 
     var pluginId = 'b7e3c2a4-6f1d-4e8a-9c55-2d7f0a9e41c3';
@@ -49,6 +49,11 @@ define(['baseView', 'loading', 'emby-input', 'emby-button', 'emby-checkbox', 'em
         }).join('');
 
         page.querySelector('#chkDryRun').checked = config.DryRun !== false;
+        page.querySelector('#chkAnnounce').checked = config.AnnounceEnabled !== false;
+        page.querySelector('#txtAnnounceHeader').value = config.AnnouncementHeader || '';
+        page.querySelector('#txtAnnounceText').value = config.AnnouncementText || '';
+        var seen = (config.AnnouncedUserIds || []).length;
+        page.querySelector('#announcedCount').textContent = seen ? 'Shown to ' + seen + ' of ' + users.length + ' users so far.' : 'Not shown to anyone yet.';
         page.querySelector('#txtPlaylistName').value = config.PlaylistName || 'Report a Problem';
         page.querySelector('#numLimit').value = config.DailyLimitPerUser;
         page.querySelector('#numMaxEps').value = config.MaxEpisodesPerReport;
@@ -70,6 +75,9 @@ define(['baseView', 'loading', 'emby-input', 'emby-button', 'emby-checkbox', 'em
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
             config.DryRun = form.querySelector('#chkDryRun').checked;
             config.PlaylistName = form.querySelector('#txtPlaylistName').value.trim() || 'Report a Problem';
+            config.AnnounceEnabled = form.querySelector('#chkAnnounce').checked;
+            config.AnnouncementHeader = form.querySelector('#txtAnnounceHeader').value.trim();
+            config.AnnouncementText = form.querySelector('#txtAnnounceText').value.trim();
             config.ExcludedUserIds = Array.prototype.slice.call(form.querySelectorAll('.chkUser'))
                 .filter(function (c) { return c.checked; })
                 .map(function (c) { return norm(c.getAttribute('data-id')); });
@@ -90,6 +98,16 @@ define(['baseView', 'loading', 'emby-input', 'emby-button', 'emby-checkbox', 'em
     function View(view, params) {
         BaseView.apply(this, arguments);
         view.querySelector('form').addEventListener('submit', onSubmit);
+        view.querySelector('#btnAnnounceAgain').addEventListener('click', function () {
+            loading.show();
+            ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                config.AnnouncedUserIds = [];
+                return ApiClient.updatePluginConfiguration(pluginId, config);
+            }).then(function () {
+                view.querySelector('#announcedCount').textContent = 'Not shown to anyone yet.';
+                loading.hide();
+            });
+        });
     }
 
     Object.assign(View.prototype, BaseView.prototype);

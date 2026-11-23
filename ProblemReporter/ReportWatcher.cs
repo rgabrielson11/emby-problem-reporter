@@ -47,6 +47,7 @@ namespace ProblemReporter
         private Timer _pendingTimer;
         private readonly Dictionary<long, long> _playlistByUser = new Dictionary<long, long>();
         private readonly HashSet<long> _createFailedLogged = new HashSet<long>();
+        private readonly Dictionary<string, DateTime> _sessionFirstSeen = new Dictionary<string, DateTime>();
 
         public ReportWatcher(ILibraryManager library, IUserManager users, IPlaylistManager playlists,
             ISessionManager sessions, IHttpClient http, IJsonSerializer json, ILogManager logManager)
@@ -185,6 +186,9 @@ namespace ProblemReporter
         private async Task PollAsync(CancellationToken ct)
         {
             var cfg = Cfg;
+            try { await AnnounceAsync(cfg, ct).ConfigureAwait(false); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { _log.Warn("announcement failed: {0}", ex.Message); }
             foreach (var user in TargetUsers(cfg).ToList())
             {
                 ct.ThrowIfCancellationRequested();
@@ -201,6 +205,57 @@ namespace ProblemReporter
                 try { await HandleBatch(user, items, cfg, ct).ConfigureAwait(false); }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { _log.ErrorException("handling {0}'s report failed", ex, user.Name); }
+                Save();
+            }
+        }
+
+        // ── One-time announcement ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Shows each user the announcement once, the first time they're in an Emby app that can display
+        /// messages and isn't playing anything. Waits 20 seconds into the session so the app has finished loading.
+        /// </summary>
+        private async Task AnnounceAsync(PluginConfiguration cfg, CancellationToken ct)
+        {
+            if (!cfg.AnnounceEnabled || cfg.DryRun || string.IsNullOrWhiteSpace(cfg.AnnouncementText)) return;
+            var done = new HashSet<string>((cfg.AnnouncedUserIds ?? Array.Empty<string>()).Select(Norm));
+            var targets = TargetUsers(cfg).ToDictionary(u => u.InternalId);
+            var now = DateTime.UtcNow;
+            var live = new HashSet<string>();
+            bool changed = false;
+
+            foreach (var s in _sessions.Sessions.ToList())
+            {
+                if (s == null || string.IsNullOrEmpty(s.Id)) continue;
+                live.Add(s.Id);
+                if (!_sessionFirstSeen.ContainsKey(s.Id)) _sessionFirstSeen[s.Id] = now;
+                if (!targets.TryGetValue(s.UserInternalId, out var user)) continue;
+                var key = Norm(user.Id.ToString("N"));
+                if (done.Contains(key)) continue;
+                if (now - _sessionFirstSeen[s.Id] < TimeSpan.FromSeconds(20)) continue;
+                if (s.NowPlayingItem != null) continue;
+                if (now - s.LastActivityDate > TimeSpan.FromMinutes(5)) continue;
+                if (!(s.SupportedCommands ?? Array.Empty<string>()).Contains("DisplayMessage", StringComparer.OrdinalIgnoreCase)) continue;
+
+                try
+                {
+                    await _sessions.SendMessageCommand(null, s.Id, new MessageCommand
+                    {
+                        Header = cfg.AnnouncementHeader,
+                        Text = cfg.AnnouncementText,
+                        TimeoutMs = null      // stays up until dismissed
+                    }, ct).ConfigureAwait(false);
+                    done.Add(key);
+                    changed = true;
+                    _log.Info("showed the Report a Problem announcement to {0} ({1})", user.Name, s.Client);
+                }
+                catch (Exception ex) { _log.Debug("couldn't show announcement to {0}: {1}", user.Name, ex.Message); }
+            }
+
+            foreach (var gone in _sessionFirstSeen.Keys.Where(k => !live.Contains(k)).ToList()) _sessionFirstSeen.Remove(gone);
+            if (changed)
+            {
+                cfg.AnnouncedUserIds = done.ToArray();
                 Save();
             }
         }
