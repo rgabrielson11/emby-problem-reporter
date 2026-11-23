@@ -53,7 +53,7 @@ Dashboard → Plugins → Problem Reporter:
 
 The settings page also lists the last 50 reports with their status: Waiting, Replaced, Flagged, Gave up or Dry run.
 
-Logs go to the Emby server log, prefixed `ProblemReporter:`.
+Logs go to the Emby server log, prefixed `ProblemReporter:` (the logger name).
 
 ## Building
 

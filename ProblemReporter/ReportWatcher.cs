@@ -70,7 +70,7 @@ namespace ProblemReporter
         {
             _pollTimer = new Timer(_ => Tick(PollAsync), null, TimeSpan.FromSeconds(30), PollEvery);
             _pendingTimer = new Timer(_ => Tick(CheckPendingAsync), null, TimeSpan.FromMinutes(1), CheckPendingEvery);
-            _log.Info("ProblemReporter: started{0}", Cfg.DryRun ? " (dry run)" : "");
+            _log.Info("started{0}", Cfg.DryRun ? " (dry run)" : "");
         }
 
         private void Tick(Func<CancellationToken, Task> work)
@@ -80,7 +80,7 @@ namespace ProblemReporter
             {
                 try { await work(_cts.Token).ConfigureAwait(false); }
                 catch (OperationCanceledException) { }
-                catch (Exception ex) { _log.ErrorException("ProblemReporter: run failed", ex); }
+                catch (Exception ex) { _log.ErrorException("run failed", ex); }
                 finally { Gate.Release(); }
             });
         }
@@ -133,7 +133,7 @@ namespace ProblemReporter
             if (placeholder == null)
             {
                 if (_createFailedLogged.Add(user.InternalId))
-                    _log.Warn("ProblemReporter: {0} can't see any movies or episodes; no playlist made", user.Name);
+                    _log.Warn("{0} can't see any movies or episodes; no playlist made", user.Name);
                 return null;
             }
 
@@ -151,7 +151,7 @@ namespace ProblemReporter
             catch (Exception ex)
             {
                 if (_createFailedLogged.Add(user.InternalId))
-                    _log.ErrorException("ProblemReporter: couldn't create playlist for {0}", ex, user.Name);
+                    _log.ErrorException("couldn't create playlist for {0}", ex, user.Name);
                 return null;
             }
 
@@ -165,7 +165,7 @@ namespace ProblemReporter
             var entries = Entries(pl);
             if (entries.Count > 0)
                 await _playlists.RemoveFromPlaylist(pl.InternalId, entries.Select(e => e.Entry).ToArray()).ConfigureAwait(false);
-            _log.Info("ProblemReporter: created \"{0}\" playlist for {1}", cfg.PlaylistName, user.Name);
+            _log.Info("created \"{0}\" playlist for {1}", cfg.PlaylistName, user.Name);
             return pl;
         }
 
@@ -196,11 +196,11 @@ namespace ProblemReporter
                 // Take everything out first so a slow Radarr/Sonarr can't cause a second report of the same thing.
                 await _playlists.RemoveFromPlaylist(pl.InternalId, entries.Select(e => e.Entry).ToArray()).ConfigureAwait(false);
                 var items = entries.Select(e => e.Item).GroupBy(i => i.InternalId).Select(g => g.First()).ToList();
-                _log.Info("ProblemReporter: {0} reported {1} item(s): {2}", user.Name, items.Count, string.Join(", ", items.Select(Describe)));
+                _log.Info("{0} reported {1} item(s): {2}", user.Name, items.Count, string.Join(", ", items.Select(Describe)));
 
                 try { await HandleBatch(user, items, cfg, ct).ConfigureAwait(false); }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { _log.ErrorException("ProblemReporter: handling {0}'s report failed", ex, user.Name); }
+                catch (Exception ex) { _log.ErrorException("handling {0}'s report failed", ex, user.Name); }
                 Save();
             }
         }
@@ -224,7 +224,7 @@ namespace ProblemReporter
                 if (other is Series || other is Season)
                     await Flag(user, other, $"A whole {(other is Season ? "season" : "show")} was reported. Not replacing it automatically.", tv: true, ct).ConfigureAwait(false);
                 else
-                    _log.Info("ProblemReporter: ignoring {0} ({1}); only movies and episodes can be reported", other.Name, other.GetType().Name);
+                    _log.Info("ignoring {0} ({1}); only movies and episodes can be reported", other.Name, other.GetType().Name);
             }
         }
 
@@ -232,7 +232,7 @@ namespace ProblemReporter
         {
             if (Cfg.Reports.Any(r => r.EmbyItemId == item.InternalId && r.Status == ReportStatus.Waiting))
             {
-                _log.Info("ProblemReporter: {0} is already being replaced; ignoring repeat report from {1}", Describe(item), user.Name);
+                _log.Info("{0} is already being replaced; ignoring repeat report from {1}", Describe(item), user.Name);
                 await Notify(user, "Already on it", $"{Describe(item)} is already being replaced.", ct).ConfigureAwait(false);
                 return;
             }
@@ -240,7 +240,7 @@ namespace ProblemReporter
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                _log.ErrorException("ProblemReporter: report of {0} failed", ex, Describe(item));
+                _log.ErrorException("report of {0} failed", ex, Describe(item));
                 await Flag(user, item, $"Automatic replacement failed: {ex.Message}", item is Episode, ct).ConfigureAwait(false);
             }
         }
@@ -313,7 +313,7 @@ namespace ProblemReporter
             {
                 r.Status = ReportStatus.DryRun;
                 r.Note = $"Would delete Radarr file {r.OldFileId}, {(grab != null ? $"blocklist \"{grab.sourceTitle}\"" : "not blocklist (no download history)")}, and search.";
-                _log.Info("ProblemReporter: [dry run] {0}: {1}", r.Title, r.Note);
+                _log.Info("[dry run] {0}: {1}", r.Title, r.Note);
             }
             else
             {
@@ -326,7 +326,7 @@ namespace ProblemReporter
                 if (!rm.monitored) await _radarr.Monitor(rm.id, ct).ConfigureAwait(false);
                 await _radarr.Search(rm.id, ct).ConfigureAwait(false);
                 r.Status = ReportStatus.Waiting;
-                _log.Info("ProblemReporter: {0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
+                _log.Info("{0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
             }
             Cfg.Reports.Add(r);
             await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced; you'll get a Seerr notification when it's back.", ct).ConfigureAwait(false);
@@ -377,7 +377,7 @@ namespace ProblemReporter
             {
                 r.Status = ReportStatus.DryRun;
                 r.Note = $"Would delete Sonarr file {r.OldFileId} ({r.EpisodeIds.Length} episode(s)), {(grab != null ? $"blocklist \"{grab.sourceTitle}\"" : "not blocklist (no download history)")}, and search.";
-                _log.Info("ProblemReporter: [dry run] {0}: {1}", r.Title, r.Note);
+                _log.Info("[dry run] {0}: {1}", r.Title, r.Note);
             }
             else
             {
@@ -390,7 +390,7 @@ namespace ProblemReporter
                 await _sonarr.Monitor(r.EpisodeIds, ct).ConfigureAwait(false);
                 await _sonarr.Search(r.EpisodeIds, ct).ConfigureAwait(false);
                 r.Status = ReportStatus.Waiting;
-                _log.Info("ProblemReporter: {0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
+                _log.Info("{0}: deleted {1}{2}, searching for a replacement", r.Title, r.OldFileName, r.Blocklisted ? " and blocklisted it" : "");
             }
             Cfg.Reports.Add(r);
             await Notify(user, "Problem reported", $"Thanks. {r.Title} is being replaced; you'll get a Seerr notification when it's back.", ct).ConfigureAwait(false);
@@ -418,7 +418,7 @@ namespace ProblemReporter
             r.SeerrIssueId = await OpenIssue(user, tv, tmdb, season, episode,
                 $"Reported from Emby by {user.Name} (Report a Problem playlist).\nFile: {Path.GetFileName(item.Path ?? "")}\nNeeds a look: {reason}", cfg, ct).ConfigureAwait(false);
             cfg.Reports.Add(r);
-            _log.Warn("ProblemReporter: flagged {0} from {1}: {2}", r.Title, user.Name, reason);
+            _log.Warn("flagged {0} from {1}: {2}", r.Title, user.Name, reason);
             await Notify(user, "Problem reported", $"Thanks. {r.Title} has been passed on to be looked at.", ct).ConfigureAwait(false);
         }
 
@@ -430,25 +430,25 @@ namespace ProblemReporter
                 var mediaId = await _seerr.MediaId(tv, tmdbId, ct).ConfigureAwait(false);
                 if (mediaId == 0)
                 {
-                    _log.Warn("ProblemReporter: Seerr doesn't track {0} {1}; no issue opened", tv ? "show" : "movie", tmdbId);
+                    _log.Warn("Seerr doesn't track {0} {1}; no issue opened", tv ? "show" : "movie", tmdbId);
                     return 0;
                 }
                 var seerrUser = await _seerr.UserFor(user.Id, ct).ConfigureAwait(false);
                 if (seerrUser == 0) message = $"(Emby user {user.Name} isn't linked in Seerr.)\n" + message;
                 if (cfg.DryRun)
                 {
-                    _log.Info("ProblemReporter: [dry run] would open Seerr issue on media {0} as Seerr user {1}{2}", mediaId,
+                    _log.Info("[dry run] would open Seerr issue on media {0} as Seerr user {1}{2}", mediaId,
                         seerrUser == 0 ? "admin" : seerrUser.ToString(), season.HasValue ? $" (S{season}E{episode})" : "");
                     return 0;
                 }
                 var id = await _seerr.CreateIssue(mediaId, seerrUser, message, season, episode, ct).ConfigureAwait(false);
-                _log.Info("ProblemReporter: opened Seerr issue {0}", id);
+                _log.Info("opened Seerr issue {0}", id);
                 return id;
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                _log.Warn("ProblemReporter: couldn't open Seerr issue: {0}", ex.Message);
+                _log.Warn("couldn't open Seerr issue: {0}", ex.Message);
                 return 0;
             }
         }
@@ -497,12 +497,12 @@ namespace ProblemReporter
                         r.Note = $"No replacement after {cfg.GiveUpAfterDays} days.";
                         if (r.SeerrIssueId > 0)
                             await TrySeerr(() => _seerr.Comment(r.SeerrIssueId, $"No replacement found after {cfg.GiveUpAfterDays} days. Leaving this open for a manual look.", ct)).ConfigureAwait(false);
-                        _log.Warn("ProblemReporter: gave up waiting for {0}", r.Title);
+                        _log.Warn("gave up waiting for {0}", r.Title);
                         changed = true;
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { _log.Warn("ProblemReporter: checking {0} failed: {1}", r.Title, ex.Message); }
+                catch (Exception ex) { _log.Warn("checking {0} failed: {1}", r.Title, ex.Message); }
             }
 
             if (cfg.Reports.Count > 300)
@@ -527,7 +527,7 @@ namespace ProblemReporter
         private async Task Finish(ProblemReport r, CancellationToken ct)
         {
             r.Status = ReportStatus.Replaced;
-            _log.Info("ProblemReporter: {0} replaced with {1}", r.Title, r.NewRelease);
+            _log.Info("{0} replaced with {1}", r.Title, r.NewRelease);
             if (r.SeerrIssueId > 0)
             {
                 await TrySeerr(() => _seerr.Comment(r.SeerrIssueId, $"Replaced with {r.NewRelease}. It's ready to watch in Emby.", ct)).ConfigureAwait(false);
@@ -541,7 +541,7 @@ namespace ProblemReporter
         {
             try { await call().ConfigureAwait(false); }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { _log.Warn("ProblemReporter: Seerr call failed: {0}", ex.Message); }
+            catch (Exception ex) { _log.Warn("Seerr call failed: {0}", ex.Message); }
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────────────
@@ -555,7 +555,7 @@ namespace ProblemReporter
                     await _sessions.SendMessageCommand(null, s.Id, new MessageCommand { Header = header, Text = text, TimeoutMs = 8000 }, ct).ConfigureAwait(false);
                 }
             }
-            catch (Exception ex) { _log.Debug("ProblemReporter: couldn't message {0}: {1}", user.Name, ex.Message); }
+            catch (Exception ex) { _log.Debug("couldn't message {0}: {1}", user.Name, ex.Message); }
         }
 
         internal static string Describe(BaseItem i)
