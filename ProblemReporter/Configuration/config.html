@@ -1,0 +1,37 @@
+<div is="emby-scroller" class="view flex flex-direction-column scrollFrameY flex-grow" data-horizontal="false" data-forcescrollbar="true" data-centerfocus="true" data-bindheader="true" data-controller="__plugin/problemreporterjs" data-title="Problem Reporter">
+    <div class="scrollSlider flex-grow flex-direction-column padded-left padded-left-page padded-right padded-top-page padded-bottom-page">
+        <form class="auto-center">
+            <div class="checkboxContainer"><label><input is="emby-checkbox" type="checkbox" id="chkDryRun" /><span>Dry run (log what would happen, change nothing in Radarr, Sonarr or Seerr)</span></label></div>
+            <div class="fieldDescription">Every user gets a private playlist. Anything they add to it is taken out again within about 15 seconds and reported: a Seerr issue in their name, the release blocklisted, the file deleted and a replacement searched for. The Seerr issue resolves itself once the new file is in Emby. Server log lines start with "ProblemReporter:".</div>
+
+            <h2>Recent reports</h2>
+            <div id="reportList"></div>
+
+            <h2>Playlist</h2>
+            <div class="inputContainer"><input is="emby-input" type="text" id="txtPlaylistName" label="Playlist name" /><div class="fieldDescription">Changing this makes new playlists; delete the old ones by hand.</div></div>
+            <div class="fieldDescription">Users who don't get a playlist:</div>
+            <div id="userList"></div>
+
+            <h2>Limits</h2>
+            <div class="inputContainer"><input is="emby-input" type="number" id="numLimit" min="0" label="Replacements per user per day (admins unlimited, 0 = no limit)" /><div class="fieldDescription">Reports past the limit still open a Seerr issue but nothing is deleted.</div></div>
+            <div class="inputContainer"><input is="emby-input" type="number" id="numMaxEps" min="1" label="Most episodes of one show replaced from a single report" /><div class="fieldDescription">More than this (a whole season or show) opens a Seerr issue for you instead.</div></div>
+            <div class="inputContainer"><input is="emby-input" type="number" id="numGiveUp" min="0" label="Stop waiting for a replacement after (days)" /></div>
+
+            <h2>Radarr</h2>
+            <div class="inputContainer"><input is="emby-input" type="text" id="txtRadarrUrl" label="URL" placeholder="http://192.168.1.10:7878" /></div>
+            <div class="inputContainer"><input is="emby-input" type="password" id="txtRadarrKey" label="API key" /></div>
+
+            <h2>Sonarr</h2>
+            <div class="inputContainer"><input is="emby-input" type="text" id="txtSonarrUrl" label="URL" placeholder="http://192.168.1.10:8989" /></div>
+            <div class="inputContainer"><input is="emby-input" type="password" id="txtSonarrKey" label="API key" /></div>
+
+            <h2>Seerr</h2>
+            <div class="inputContainer"><input is="emby-input" type="text" id="txtSeerrUrl" label="URL" placeholder="http://192.168.1.10:5055" /></div>
+            <div class="inputContainer"><input is="emby-input" type="password" id="txtSeerrKey" label="API key" /><div class="fieldDescription">Settings → General → API Key in Seerr. Issues are filed as the Seerr user linked to the Emby account, or as the admin if there isn't one.</div></div>
+
+            <div>
+                <button is="emby-button" type="submit" class="raised button-submit block"><span>Save</span></button>
+            </div>
+        </form>
+    </div>
+</div>
